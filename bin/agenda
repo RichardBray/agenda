@@ -12,10 +12,25 @@ CAL_LIB="$HOME/.local/share/cal/events.sh"
 [ -f "$CAL_LIB" ] || CAL_LIB="$(cd "$(dirname "$0")/../lib" 2>/dev/null && pwd)/events.sh"
 . "$CAL_LIB"
 
+case "$1" in
+  -h|--help)
+    cat <<'EOF'
+agenda: print upcoming macOS calendar events to stdout, read-only, no network.
+
+Usage:
+  agenda        upcoming events today + tomorrow (default)
+  agenda 0      remaining events today only
+  agenda 7      next 7 days
+  agenda -1     include yesterday too (past events shown muted)
+EOF
+    exit 0 ;;
+esac
+
 days="${1:-1}"
 now=$(date +%s)
 today=$(date +%Y-%m-%d)
 tomorrow=$(date -v+1d +%Y-%m-%d)
+yesterday=$(date -v-1d +%Y-%m-%d)
 
 # Color only when writing to a terminal.
 if [ -t 1 ]; then COLOR=1; else COLOR=0; fi
@@ -30,7 +45,12 @@ fg() {
   printf '\033[38;5;%sm' "$(cal_color "$1")"
 }
 
-events=$(cal_events "$days" | sort -n | awk -F'|' -v now="$now" '$1 > now')
+# Negative days = look back; include past events (rendered muted below).
+if [ "$days" -lt 0 ]; then
+  events=$(cal_events "$days" | sort -n)
+else
+  events=$(cal_events "$days" | sort -n | awk -F'|' -v now="$now" '$1 > now')
+fi
 
 if [ -z "$events" ]; then
   printf '%sNo upcoming events.%s\n' "$DIM" "$RST"
@@ -42,8 +62,9 @@ last_date=""
 printf '%s\n' "$events" | while IFS='|' read -r epoch date start title cal; do
   if [ "$date" != "$last_date" ]; then
     case "$date" in
-      "$today")    label="Today" ;;
-      "$tomorrow") label="Tomorrow" ;;
+      "$today")     label="Today" ;;
+      "$tomorrow")  label="Tomorrow" ;;
+      "$yesterday") label="Yesterday" ;;
       *)           label="" ;;
     esac
     pretty=$(date -j -f "%Y-%m-%d" "$date" "+%a %d %b" 2>/dev/null)
@@ -51,9 +72,14 @@ printf '%s\n' "$events" | while IFS='|' read -r epoch date start title cal; do
     printf '\n%s%s%s\n' "$BOLD" "$header" "$RST"
     last_date="$date"
   fi
-  c=$(fg "$cal")
-  printf '  %s●%s %s%s%s  %-32s %sin %s%s\n' \
-    "$c" "$RST" "$c" "$start" "$RST" "$title" "$DIM" "$(cal_countdown "$((epoch - now))")" "$RST"
+  delta=$((epoch - now))
+  if [ "$delta" -lt 0 ]; then
+    c="$DIM"; when="$(cal_countdown $((-delta))) ago"   # past -> muted
+  else
+    c=$(fg "$cal"); when="in $(cal_countdown "$delta")"
+  fi
+  printf '  %s●%s %s%s%s  %-32s %s%s%s\n' \
+    "$c" "$RST" "$c" "$start" "$RST" "$title" "$DIM" "$when" "$RST"
 done
 
 # Legend: which color maps to which calendar.

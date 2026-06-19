@@ -17,9 +17,14 @@ CAL_EXCLUDE="${CAL_EXCLUDE:-UK Holidays,Birthdays,Holidays in United Kingdom,Hol
 # name as a trailing "(...)" on the title line; we split it back out.
 cal_events() {
   days="${1:-1}"
+  if [ "$days" -lt 0 ]; then
+    span="eventsFrom:$(date -v"${days}d" +%Y-%m-%d) to:$(date +%Y-%m-%d)"
+  else
+    span="eventsToday+${days}"
+  fi
   "$CAL_ICALBUDDY" -nrd -npn -b "" -ps "|${CAL_SEP}|" \
     -iep "datetime,title" -po "datetime,title" \
-    -df "%Y-%m-%d" -tf "%H:%M" -ec "$CAL_EXCLUDE" "eventsToday+${days}" 2>/dev/null \
+    -df "%Y-%m-%d" -tf "%H:%M" -ec "$CAL_EXCLUDE" $span 2>/dev/null \
   | while IFS= read -r line; do
       [ -z "$line" ] && continue
       dt=${line%%"${CAL_SEP}"*}
