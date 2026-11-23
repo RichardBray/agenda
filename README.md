@@ -28,14 +28,15 @@ Calendars: ● richard@sideguide.dev   ● richardobray@yahoo.co.uk
 ```
 Your accounts ⇄ macOS sync (automatic) ⇄ local calendar store (~/Library/Calendars)
                                                       │
-                          icalBuddy reads it ─────────┤
+                         cal-events reads it ─────────┤
                                                       │
    agenda  ──────────────────────────────────────────┤  (on demand, in your terminal)
                                                       │
    launchd (every 60s) ──► cal-notify ──► osascript ──┘  (background reminders)
 ```
 
-- **`icalBuddy`** reads the local calendar store — fast, no credentials.
+- **`cal-events`** is a small Swift helper (EventKit) that reads the local
+  calendar store — fast, no credentials. It's compiled by `install.sh`.
 - **`agenda`** formats upcoming events for the terminal.
 - **`cal-notify`** is run every 60s by a **launchd** agent; it fires a
   notification 5 min and 1 min before each event (deduplicated so each alert
@@ -45,8 +46,7 @@ Your accounts ⇄ macOS sync (automatic) ⇄ local calendar store (~/Library/Cal
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
-- [Homebrew](https://brew.sh)
-- `icalBuddy`:  `brew install ical-buddy`
+- Xcode command line tools (for `swiftc`):  `xcode-select --install`
 - At least one calendar account added in *System Settings → Internet Accounts*
 
 ## Install
@@ -54,12 +54,11 @@ Your accounts ⇄ macOS sync (automatic) ⇄ local calendar store (~/Library/Cal
 ```sh
 git clone <your-repo-url> cal-reminders
 cd cal-reminders
-brew install ical-buddy
 ./install.sh
 ```
 
 `install.sh` copies the scripts into `~/.local/bin` + `~/.local/share/cal`,
-generates the launchd agent with your paths, and loads it. Re-run it any time
+compiles `cal-events`, generates the launchd agent with your paths, and loads it. Re-run it any time
 after editing. Make sure `~/.local/bin` is on your `PATH`.
 
 ## Usage
@@ -88,7 +87,7 @@ Environment variables, read by both `agenda` and `cal-notify`
 | ------------- | ----------------------------------------- | -------------------------------------------------- |
 | `CAL_EXCLUDE` | holidays, birthdays, reminders calendars  | Comma-separated calendar names to ignore.          |
 | `CAL_COLORS`  | (auto)                                    | Pin colors, e.g. `Work=39;Home=41` (256-color codes). |
-| `CAL_ICALBUDDY` | auto-detected                           | Path to the icalBuddy binary.                      |
+| `CAL_EVENTS_BIN` | `~/.local/share/cal/cal-events`        | Path to the cal-events helper.                     |
 
 **Reminder timings** live at the top of `bin/cal-notify`:
 
@@ -101,9 +100,9 @@ Edit, then re-run `./install.sh`.
 
 ### About the colors
 
-`icalBuddy` can't read the actual colors you set in Calendar.app, so each
-calendar's color is **deterministically derived from its name** (stable across
-runs) from a fixed palette. Override any calendar explicitly with `CAL_COLORS`.
+The real Calendar.app colors aren't read, so each calendar's color is
+**deterministically derived from its name** (stable across runs) from a fixed
+palette. Override any calendar explicitly with `CAL_COLORS`.
 
 ## Files
 

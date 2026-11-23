@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Installer for cal-reminders. Idempotent -- safe to re-run after edits.
-# Copies the CLI + notifier into ~/.local, generates the launchd agent with
+# Copies the CLI + notifier into ~/.local, builds the calendar helper, generates the launchd agent with
 # your paths, and (re)loads it.
 
 set -e
@@ -16,9 +16,9 @@ PLIST="$AGENTS/$LABEL.plist"
 UID_NUM=$(id -u)
 
 # 1. Dependency check
-if ! command -v icalBuddy >/dev/null 2>&1 && [ ! -x /opt/homebrew/bin/icalBuddy ]; then
-  echo "Missing dependency: icalBuddy" >&2
-  echo "Install it with:  brew install ical-buddy" >&2
+if ! command -v swiftc >/dev/null 2>&1; then
+  echo "Missing dependency: swiftc" >&2
+  echo "Install the Xcode command line tools with:  xcode-select --install" >&2
   exit 1
 fi
 
@@ -27,6 +27,13 @@ mkdir -p "$BIN" "$LIB" "$STATE" "$AGENTS"
 install -m 0755 "$REPO/bin/agenda"     "$BIN/agenda"
 install -m 0755 "$REPO/bin/cal-notify" "$BIN/cal-notify"
 install -m 0644 "$REPO/lib/events.sh"  "$LIB/events.sh"
+
+# Compile the EventKit helper. The embedded Info.plist carries the calendar
+# permission text, and signing gives the binary a stable identity for macOS.
+swiftc -O "$REPO/lib/cal-events.swift" -o "$LIB/cal-events" \
+  -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist \
+  -Xlinker "$REPO/lib/cal-events-Info.plist"
+codesign -s - -f --identifier com.robray.cal-events "$LIB/cal-events" 2>/dev/null
 
 # 3. Generate the launchd agent (paths are user-specific, so not committed)
 cat > "$PLIST" <<EOF

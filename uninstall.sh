@@ -9,7 +9,7 @@ UID_NUM=$(id -u)
 launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 rm -f "$HOME/Library/LaunchAgents/$LABEL.plist"
 rm -f "$HOME/.local/bin/agenda" "$HOME/.local/bin/cal-notify"
-rm -f "$HOME/.local/share/cal/events.sh"
+rm -f "$HOME/.local/share/cal/events.sh" "$HOME/.local/share/cal/cal-events"
 rmdir "$HOME/.local/share/cal" 2>/dev/null || true
 
 echo "Uninstalled cal-reminders."

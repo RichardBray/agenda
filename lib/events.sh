@@ -1,50 +1,21 @@
 # Shared calendar helpers, sourced by `agenda` and `cal-notify`.
 #
-# Reads the LOCAL calendar store that macOS keeps in sync with your accounts
-# (added in System Settings > Internet Accounts). No API keys, no network of
-# our own -- icalBuddy reads ~/Library/Calendars directly.
+# Events come from `cal-events`, a small EventKit helper (cal-events.swift,
+# built by build.sh). It reads the calendars macOS keeps synced with your
+# accounts; no API keys, no network of our own.
 
-CAL_ICALBUDDY="${CAL_ICALBUDDY:-$(command -v icalBuddy 2>/dev/null || echo /opt/homebrew/bin/icalBuddy)}"
-CAL_SEP="~~@~~"
+CAL_EVENTS_BIN="${CAL_EVENTS_BIN:-$HOME/.local/share/cal/cal-events}"
 
-# Calendars to ignore (holidays, birthdays, reminders). Override with $CAL_EXCLUDE.
-CAL_EXCLUDE="${CAL_EXCLUDE:-UK Holidays,Birthdays,Holidays in United Kingdom,Holidays in the United Kingdom,Reminders}"
-
-# cal_events <daysAhead>
+# cal_events <daysAhead>   (negative = look back)
 # Emits one line per timed event:
 #   "<startEpoch>|<YYYY-MM-DD>|<HH:MM>|<title>|<calendar>"
-# All-day events (no start time) are skipped. icalBuddy appends the calendar
-# name as a trailing "(...)" on the title line; we split it back out.
+# Excluded calendars come from $CAL_EXCLUDE (see cal-events.swift).
 cal_events() {
-  days="${1:-1}"
-  if [ "$days" -lt 0 ]; then
-    span="eventsFrom:$(date -v"${days}d" +%Y-%m-%d) to:$(date +%Y-%m-%d)"
-  else
-    span="eventsToday+${days}"
+  if [ ! -x "$CAL_EVENTS_BIN" ]; then
+    echo "cal-events not built: run ~/dotfiles/share/cal/build.sh" >&2
+    return 1
   fi
-  "$CAL_ICALBUDDY" -nrd -npn -b "" -ps "|${CAL_SEP}|" \
-    -iep "datetime,title" -po "datetime,title" \
-    -df "%Y-%m-%d" -tf "%H:%M" -ec "$CAL_EXCLUDE" $span 2>/dev/null \
-  | while IFS= read -r line; do
-      [ -z "$line" ] && continue
-      dt=${line%%"${CAL_SEP}"*}
-      full=${line#*"${CAL_SEP}"}
-      [ "$full" = "$line" ] && continue             # malformed / no separator
-
-      # Calendar name is the LAST parenthetical icalBuddy appended.
-      case "$full" in
-        *" ("*) cal=${full##*\(}; cal=${cal%\)}; title=${full% (*} ;;
-        *)      cal=""; title=$full ;;
-      esac
-
-      date=$(printf '%s' "$dt" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
-      start=$(printf '%s' "$dt" | grep -oE '[0-9]{1,2}:[0-9]{2}' | head -1)
-      [ -z "$date" ] && continue
-      [ -z "$start" ] && continue                   # all-day -> skip
-      epoch=$(date -j -f "%Y-%m-%d %H:%M" "$date $start" +%s 2>/dev/null)
-      [ -z "$epoch" ] && continue
-      printf '%s|%s|%s|%s|%s\n' "$epoch" "$date" "$start" "$title" "$cal"
-    done
+  "$CAL_EVENTS_BIN" "${1:-1}"
 }
 
 # cal_countdown <seconds> -> "<1m" | "42m" | "3h 5m"
@@ -58,7 +29,7 @@ cal_countdown() {
 }
 
 # cal_color <calendarName> -> a 256-color code, stable per calendar.
-# icalBuddy can't read the real Calendar.app colors, so we deterministically
+# The real Calendar.app colors aren't read, so we deterministically
 # hash the name to a fixed palette (same calendar -> same color every run).
 # Override a specific calendar via CAL_COLORS="Work=39;Home=41".
 cal_color() {

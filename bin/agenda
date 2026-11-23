@@ -5,7 +5,7 @@
 #   agenda 0      remaining events today only
 #   agenda 7      next 7 days
 #
-# Reads the local synced calendar via icalBuddy. No network / API keys.
+# Reads the local synced calendar via cal-events (EventKit). No network / API keys.
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 CAL_LIB="$HOME/.local/share/cal/events.sh"
