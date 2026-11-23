@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Installer for cal-reminders. Idempotent -- safe to re-run after edits.
+# Installer for agenda. Idempotent -- safe to re-run after edits.
 # Copies the CLI + notifier into ~/.local, builds the calendar helper, generates the launchd agent with
 # your paths, and (re)loads it.
 
@@ -65,6 +65,6 @@ launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$UID_NUM" "$PLIST"
 launchctl enable "gui/$UID_NUM/$LABEL"
 
-echo "Installed cal-reminders."
+echo "Installed agenda."
 echo "  CLI:    agenda          (try it now)"
 echo "  Agent:  $LABEL  (fires reminders every 60s, starts at login)"

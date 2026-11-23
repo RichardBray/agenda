@@ -1,4 +1,4 @@
-# cal-reminders
+# agenda
 
 Never miss a meeting again. A tiny, dependency-light macOS tool that:
 
@@ -52,8 +52,8 @@ Your accounts ⇄ macOS sync (automatic) ⇄ local calendar store (~/Library/Cal
 ## Install
 
 ```sh
-git clone <your-repo-url> cal-reminders
-cd cal-reminders
+git clone git@github.com:RichardBray/agenda.git
+cd agenda
 ./install.sh
 ```
 
